@@ -10,22 +10,7 @@ defaults:
     shell: bash # -eo pipefail, so "| tail" does not hide a failed build
 
 jobs:
-  # Kotlin/Native for the Mac job: GitHub's release downloads answered 504 to the macOS runners every time.
-  konan:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          curl -fL --retry 8 --retry-all-errors --retry-delay 15 -o kn.tar.gz             https://github.com/JetBrains/kotlin/releases/download/v2.3.21/kotlin-native-prebuilt-2.3.21-macos-aarch64.tar.gz
-          ls -la kn.tar.gz
-      - uses: actions/upload-artifact@v4
-        with:
-          name: konan
-          path: kn.tar.gz
-          retention-days: 1
-          compression-level: 0
-
   build:
-    needs: konan
     runs-on: macos-15
     timeout-minutes: 60
     steps:
@@ -34,7 +19,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
         with:
           path: |
             ~/.gradle/caches
@@ -42,19 +27,21 @@ jobs:
             ~/.konan
           key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: konan
-          path: kn
-
       - name: Kotlin framework
         # The runner's (or Homebrew's) Gradle: services.gradle.org answered 504 to the wrapper download from GitHub's Macs.
         run: |
           command -v gradle || brew install gradle
           gradle --version | head -3
-          mkdir -p ~/.konan && tar -xzf kn/kn.tar.gz -C ~/.konan
-          KN=$(ls ~/.konan | grep kotlin-native-prebuilt | head -1); echo "konan: $KN"
-          for i in 1 2 3; do gradle --no-daemon -Pkotlin.native.home=$HOME/.konan/$KN :shared:assembleSharedReleaseXCFramework && exit 0; sleep 60; done; exit 1
+          for i in 1 2 3; do gradle --no-daemon :shared:assembleSharedReleaseXCFramework && exit 0; sleep 60; done; exit 1
+
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.konan
+          key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
 
       - name: Tools
         run: brew install xcodegen ffmpeg
