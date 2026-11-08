@@ -67,7 +67,7 @@ jobs:
       - name: Build for the simulator
         run: |
           xcodebuild -workspace ZapSpike.xcworkspace -scheme ZapSpike -configuration Release \
-            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath dd-sim \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath dd-sim ARCHS=arm64 \
             CODE_SIGNING_ALLOWED=NO build | tail -n 40
 
       - name: Run on an iPad simulator
