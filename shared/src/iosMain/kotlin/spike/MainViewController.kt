@@ -35,7 +35,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.coroutines.delay
-import platform.Foundation.NSLog
 import platform.UIKit.UIViewController
 
 /**
@@ -66,7 +65,7 @@ private fun Spike(bridge: PlayerBridge, autoplay: String?) {
         if (!autoplay.isNullOrBlank()) bridge.play(autoplay)
         while (true) {
             val s = bridge.status()
-            if (s != status) { println("ZAPSPIKE status: $s"); NSLog("ZAPSPIKE status: %@", s) } // stdout for the simulator run, NSLog for a device
+            if (s != status) println("ZAPSPIKE status: $s") // stdout: simctl --stdout in CI, pymobiledevice3 dvt launch --stream on a device (NSLog with a Kotlin String crashed)
             status = s
             delay(1000)
         }
