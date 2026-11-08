@@ -32,7 +32,7 @@ jobs:
         run: |
           command -v gradle || brew install gradle
           gradle --version | head -3
-          gradle --no-daemon :shared:assembleSharedReleaseXCFramework
+          for i in 1 2 3 4; do gradle --no-daemon :shared:assembleSharedReleaseXCFramework && exit 0; sleep 60; done; exit 1
 
       - name: Tools
         run: brew install xcodegen ffmpeg
