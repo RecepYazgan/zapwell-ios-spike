@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class) // ComposeUIViewController opaque = false
+
 package spike
 
 import androidx.compose.foundation.background
