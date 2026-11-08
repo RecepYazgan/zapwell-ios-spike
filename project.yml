@@ -1,0 +1,36 @@
+# XcodeGen spec: the Xcode project is generated on the cloud Mac (there is no Mac here). See .github/workflows/ios.yml.
+name: ZapSpike
+options:
+  bundleIdPrefix: net.webotion
+  deploymentTarget:
+    iOS: "15.0"
+targets:
+  ZapSpike:
+    type: application
+    platform: iOS
+    sources: [iosApp]
+    info:
+      path: iosApp/Info.plist
+      properties:
+        CFBundleDisplayName: ZapSpike
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UIRequiresFullScreen: false
+        CADisableMinimumFrameDurationOnPhone: true
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        # IPTV streams are often plain http.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        NSLocalNetworkUsageDescription: Yerel agdaki yayinlari oynatmak icin.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.webotion.zapspike
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        ENABLE_BITCODE: NO
+        OTHER_LDFLAGS: ["$(inherited)", "-lc++"]
+    dependencies:
+      - framework: shared/build/XCFrameworks/release/Shared.xcframework
+        embed: false

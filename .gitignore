@@ -1,0 +1,12 @@
+.gradle/
+build/
+.kotlin/
+*.xcodeproj/
+*.xcworkspace/
+Pods/
+Podfile.lock
+iosApp/Info.plist
+dd-*/
+out/
+ipa/
+local.properties

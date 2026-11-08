@@ -1,0 +1,65 @@
+name: iOS spike
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash # -eo pipefail, so "| tail" does not hide a failed build
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.konan
+          key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Kotlin framework
+        run: ./gradlew --no-daemon :shared:assembleSharedReleaseXCFramework
+
+      - name: Tools
+        run: brew install xcodegen ffmpeg
+
+      - name: Xcode project
+        run: |
+          xcodegen generate
+          pod install
+
+      - name: Build for the simulator
+        run: |
+          xcodebuild -workspace ZapSpike.xcworkspace -scheme ZapSpike -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath dd-sim \
+            CODE_SIGNING_ALLOWED=NO build | tail -n 40
+
+      - name: Run on an iPad simulator
+        run: bash ci/simulator-test.sh dd-sim/Build/Products/Release-iphonesimulator/ZapSpike.app out
+
+      - name: Build for the device (unsigned ipa)
+        run: |
+          xcodebuild -workspace ZapSpike.xcworkspace -scheme ZapSpike -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath dd-dev \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -n 40
+          mkdir -p ipa/Payload
+          cp -R dd-dev/Build/Products/Release-iphoneos/ZapSpike.app ipa/Payload/
+          (cd ipa && zip -qry ../out/ZapSpike-unsigned.ipa Payload)
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zapspike
+          path: out
+          retention-days: 7
