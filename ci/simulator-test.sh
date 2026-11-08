@@ -2,7 +2,11 @@
 # Installs the app on an iPad simulator and plays (1) a live MPEG-TS stream made by ffmpeg on this machine, like an
 # IPTV channel, and (2) Apple's public HLS test stream. Saves screenshots, a video and the app's status lines.
 set -u
-APP="$1"; OUT="$2"; mkdir -p "$OUT"
+APP="$1"; mkdir -p "$2"; OUT="$(cd "$2" && pwd)"
+# Apple-silicon simulators launch only signed code: ad-hoc sign the frameworks, then the app.
+find "$APP/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \) -exec codesign --force --sign - {} \; 2>/dev/null
+codesign --force --sign - "$APP" && codesign -dv "$APP" 2>&1 | head -3
+/usr/libexec/PlistBuddy -c Print "$APP/Info.plist" | head -30
 ID=net.webotion.zapspike
 
 DEV=$(xcrun simctl list devices available -j | python3 -c '
@@ -38,6 +42,9 @@ kill $FF 2>/dev/null
 run hls-apple "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8" 25
 
 xcrun simctl terminate "$DEV" $ID
+cp ~/Library/Logs/DiagnosticReports/*ZapSpike* "$OUT"/ 2>/dev/null
+xcrun simctl spawn "$DEV" log show --last 3m --predicate 'process == "ZapSpike" OR eventMessage CONTAINS "zapspike"' --style compact > "$OUT/system.log" 2>&1
+tail -n 60 "$OUT/system.log"
 for f in "$OUT"/*.log; do echo "== $f"; cat "$f"; done
 for f in "$OUT"/*.err; do echo "== $f"; tail -n 30 "$f"; done
 exit 0
