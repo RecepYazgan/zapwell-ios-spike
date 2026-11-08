@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.UIKitView
 import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.coroutines.delay
+import platform.Foundation.NSLog
 import platform.UIKit.UIView
 import platform.UIKit.UIViewController
 
@@ -58,7 +59,7 @@ private fun Spike(bridge: PlayerBridge, autoplay: String?) {
         if (!autoplay.isNullOrBlank()) bridge.play(autoplay)
         while (true) {
             val s = bridge.status()
-            if (s != status) println("ZAPSPIKE status: $s") // the CI log reads these lines
+            if (s != status) { println("ZAPSPIKE status: $s"); NSLog("ZAPSPIKE status: %@", s) } // stdout for the simulator run, NSLog for a device
             status = s
             delay(1000)
         }
