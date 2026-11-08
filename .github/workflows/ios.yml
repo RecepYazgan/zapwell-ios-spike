@@ -28,8 +28,11 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
 
       - name: Kotlin framework
-        # retried: services.gradle.org sometimes answers 504
-        run: for i in 1 2 3; do ./gradlew --no-daemon :shared:assembleSharedReleaseXCFramework && exit 0; sleep 30; done; exit 1
+        # The runner's (or Homebrew's) Gradle: services.gradle.org answered 504 to the wrapper download from GitHub's Macs.
+        run: |
+          command -v gradle || brew install gradle
+          gradle --version | head -3
+          gradle --no-daemon :shared:assembleSharedReleaseXCFramework
 
       - name: Tools
         run: brew install xcodegen ffmpeg
