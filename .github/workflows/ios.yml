@@ -32,7 +32,17 @@ jobs:
         run: |
           command -v gradle || brew install gradle
           gradle --version | head -3
-          for i in 1 2 3 4; do gradle --no-daemon :shared:assembleSharedReleaseXCFramework && exit 0; sleep 60; done; exit 1
+          # Kotlin/Native fetched by curl (Gradle's own download got 504 every time from these Macs).
+          KN=kotlin-native-prebuilt-2.3.21-macos-aarch64
+          if [ ! -d ~/.konan/$KN ]; then
+            mkdir -p ~/.konan
+            curl -fL --retry 8 --retry-all-errors --retry-delay 20 -o /tmp/kn.tgz \
+              https://github.com/JetBrains/kotlin/releases/download/v2.3.21/$KN.tar.gz \
+              || curl -fL --retry 8 --retry-all-errors --retry-delay 20 -o /tmp/kn.tgz \
+              https://download.jetbrains.com/kotlin/native/builds/releases/2.3.21/macos-aarch64/$KN.tar.gz
+            tar -xzf /tmp/kn.tgz -C ~/.konan
+          fi
+          for i in 1 2 3; do gradle --no-daemon -Pkotlin.native.home=$HOME/.konan/$KN :shared:assembleSharedReleaseXCFramework && exit 0; sleep 60; done; exit 1
 
       - name: Tools
         run: brew install xcodegen ffmpeg
