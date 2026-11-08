@@ -8,6 +8,9 @@ final class VlcPlayer: NSObject, PlayerBridge {
     let view = UIView()
     private let player = VLCMediaPlayer()
     private var lastUrl = ""
+    /// A URL asked for before the video area had a size. VLC's view inside ours keeps the size it had when playback
+    /// began (autoresizing from 0x0 stays 0x0): a fast live TS stream went black on the iPad until the app was reopened.
+    private var pendingUrl: String?
 
     override init() {
         super.init()
@@ -18,10 +21,19 @@ final class VlcPlayer: NSObject, PlayerBridge {
 
     func layoutVideo(x: Double, y: Double, width: Double, height: Double) {
         let f = CGRect(x: x, y: y, width: width, height: height)
-        DispatchQueue.main.async { if self.view.frame != f { self.view.frame = f } }
+        DispatchQueue.main.async {
+            if self.view.frame != f { self.view.frame = f }
+            if f.width > 0, f.height > 0, let u = self.pendingUrl { self.pendingUrl = nil; self.start(u) }
+        }
     }
 
     func play(url: String) {
+        DispatchQueue.main.async {
+            if self.view.bounds.width > 0, self.view.bounds.height > 0 { self.start(url) } else { self.pendingUrl = url }
+        }
+    }
+
+    private func start(_ url: String) {
         guard let u = URL(string: url) else { return }
         lastUrl = url
         let media = VLCMedia(url: u)
@@ -30,7 +42,7 @@ final class VlcPlayer: NSObject, PlayerBridge {
         player.play()
     }
 
-    func stop() { player.stop() }
+    func stop() { pendingUrl = nil; player.stop() }
 
     func status() -> String {
         let state = VLCMediaPlayerStateToString(player.state) ?? "?"
