@@ -2,19 +2,24 @@ import UIKit
 import MobileVLCKit
 import Shared
 
-/// The native player behind the Compose screen: VLCKit (the engine of VLC for iOS) draws into a plain UIView.
+/// The native player behind the Compose screen: VLCKit (the engine of VLC for iOS) draws into a plain UIView that the
+/// host puts under the transparent Compose layer; Compose reports where the video area is.
 final class VlcPlayer: NSObject, PlayerBridge {
-    private let view = UIView()
+    let view = UIView()
     private let player = VLCMediaPlayer()
     private var lastUrl = ""
 
     override init() {
         super.init()
         view.backgroundColor = .black
+        view.isUserInteractionEnabled = false
         player.drawable = view
     }
 
-    func videoView() -> UIView { view }
+    func layoutVideo(x: Double, y: Double, width: Double, height: Double) {
+        let f = CGRect(x: x, y: y, width: width, height: height)
+        DispatchQueue.main.async { if self.view.frame != f { self.view.frame = f } }
+    }
 
     func play(url: String) {
         guard let u = URL(string: url) else { return }

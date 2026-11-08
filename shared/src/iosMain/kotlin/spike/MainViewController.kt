@@ -28,16 +28,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.UIKitView
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.coroutines.delay
 import platform.Foundation.NSLog
-import platform.UIKit.UIView
 import platform.UIKit.UIViewController
 
-/** The native player, written in Swift (iosApp/VlcPlayer.swift); Compose only places its view and asks its state. */
+/**
+ * The native player, written in Swift (iosApp/VlcPlayer.swift). Its video view lies natively BEHIND the transparent
+ * Compose layer (a UIKitView inside Compose went fully black on the iPad once VLC drew); Compose only tells it where.
+ */
 interface PlayerBridge {
-    fun videoView(): UIView
+    /** The video area in points, in the Compose view's coordinates. */
+    fun layoutVideo(x: Double, y: Double, width: Double, height: Double)
     fun play(url: String)
     fun stop()
     fun status(): String
@@ -47,7 +52,7 @@ interface PlayerBridge {
 private const val HLS_TEST = "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8"
 
 /** [autoplay]: a URL given at launch (the CI run passes its local TS stream) that starts at once. */
-fun MainViewController(bridge: PlayerBridge, autoplay: String?): UIViewController = ComposeUIViewController {
+fun MainViewController(bridge: PlayerBridge, autoplay: String?): UIViewController = ComposeUIViewController(configure = { opaque = false }) {
     MaterialTheme(colorScheme = darkColorScheme()) { Spike(bridge, autoplay) }
 }
 
@@ -65,13 +70,16 @@ private fun Spike(bridge: PlayerBridge, autoplay: String?) {
         }
     }
     Column(
-        Modifier.fillMaxSize().background(Color(0xFF0E1116)).safeDrawingPadding().padding(16.dp),
+        Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp), // no background: the host view paints it
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("ZapWell iOS deneme", color = Color.White, fontSize = 22.sp)
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Color.Black)) {
-            UIKitView(factory = { bridge.videoView() }, modifier = Modifier.fillMaxSize())
-        }
+        // A transparent hole: the native video view is placed under it.
+        val density = LocalDensity.current.density
+        Box(Modifier.fillMaxWidth(0.62f).aspectRatio(16f / 9f).onGloballyPositioned { c ->
+            val r = c.boundsInWindow()
+            bridge.layoutVideo((r.left / density).toDouble(), (r.top / density).toDouble(), (r.width / density).toDouble(), (r.height / density).toDouble())
+        })
         Text(status, color = Color(0xFFB8C0CC), fontSize = 14.sp)
         OutlinedTextField(
             value = url, onValueChange = { url = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
